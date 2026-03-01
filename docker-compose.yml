@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  fuego-app:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - fuego-data:/data          # KALICI DEPOLAMA (database için)
+      - /home/ubuntu/fuego:/app   # Kod dosyaları (host'ta)
+    command: bash -c "npm install && npm run build && npm start"
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_PATH=/data/database.db
+      - CLOUDINARY_CLOUD_NAME=dfsdwqdnl
+      - CLOUDINARY_UPLOAD_PRESET=fuego-upload
+    restart: always
+
+volumes:
+  fuego-data:
+    driver: local
