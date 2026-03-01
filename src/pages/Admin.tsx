@@ -82,24 +82,33 @@ const uploadToCloudinary = async (file: File): Promise<{ url: string; type: 'ima
   formData.append('file', file);
   formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   
+  console.log('🚀 Cloudinary URL:', CLOUDINARY_URL);
+  console.log('🚀 Upload Preset:', CLOUDINARY_UPLOAD_PRESET);
+  console.log('🚀 File name:', file.name);
+  
   try {
     const response = await fetch(CLOUDINARY_URL, {
       method: 'POST',
       body: formData
     });
     
+    console.log('📡 Cloudinary response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error('Upload failed');
+      const errorText = await response.text();
+      console.error('❌ Cloudinary error response:', errorText);
+      throw new Error(`Cloudinary hatası (${response.status}): ${errorText}`);
     }
     
     const data = await response.json();
+    console.log('✅ Cloudinary success:', data);
     
     return {
       url: data.secure_url,
       type: data.resource_type === 'video' ? 'video' : 'image'
     };
   } catch (error) {
-    console.error('Cloudinary upload error:', error);
+    console.error('❌ Cloudinary upload error:', error);
     throw error;
   }
 };
