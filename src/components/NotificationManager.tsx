@@ -5,12 +5,7 @@ export default function NotificationManager() {
   const { products } = useStore();
   const lastProductCount = React.useRef(products.length);
 
-  useEffect(() => {
-    // Request permission on mount
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
+  // İZİN İSTEME KALDIRILDI - Artık otomatik bildirim izni istenmeyecek
 
   useEffect(() => {
     // Check for new products
