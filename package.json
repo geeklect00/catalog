@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
+	"postinstall": "npm rebuild better-sqlite3",
 	"start": "tsx server.ts"
   },
   "dependencies": {
