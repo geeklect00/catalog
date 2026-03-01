@@ -9,7 +9,6 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-	"postinstall": "npm rebuild better-sqlite3",
 	"start": "tsx server.ts"
   },
   "dependencies": {
@@ -18,7 +17,7 @@
     "@tailwindcss/vite": "^4.1.14",
     "@types/canvas-confetti": "^1.9.0",
     "@vitejs/plugin-react": "^5.0.4",
-    "better-sqlite3": "^12.4.1",
+    "mongoose": "^8.0.0",
     "canvas-confetti": "^1.9.4",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
