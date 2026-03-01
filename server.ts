@@ -3,9 +3,7 @@ import { createServer as createViteServer } from "vite";
 import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
-import multer from "multer";
 import fs from "fs";
-import sharp from "sharp";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,23 +11,6 @@ const __dirname = path.dirname(__filename);
 const db = new Database("database.db");
 
 // Ensure uploads directory exists
-const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({ storage: storage });
 
 // Initialize database with unified media column and new fields
 db.exec(`
@@ -163,35 +144,43 @@ async function startServer() {
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
   // Media Upload Route with Sharp processing
-  app.post("/api/upload", upload.array("files"), async (req, res) => {
-    const files = req.files as Express.Multer.File[];
-    const mediaItems = [];
-
-    for (const file of files) {
-      if (file.mimetype.startsWith("image")) {
-        const webpFilename = `${path.parse(file.filename).name}.webp`;
-        const webpPath = path.join(uploadDir, webpFilename);
-        
-        await sharp(file.path)
-          .webp({ quality: 80 })
-          .toFile(webpPath);
-        
-        // Remove original file
-        fs.unlinkSync(file.path);
-        
-        mediaItems.push({
-          type: "image",
-          url: `/uploads/${webpFilename}`
-        });
-      } else {
-        mediaItems.push({
-          type: "video",
-          url: `/uploads/${file.filename}`
-        });
+// Cloudinary URL'lerini kaydetme endpoint'i
+	app.post("/api/save-media-urls", (req, res) => {
+  try {
+    const { productId, mediaUrls } = req.body;
+    
+    // Mevcut ürünü bul
+    const product = db.prepare("SELECT * FROM products WHERE id = ?").get(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    
+    // Mevcut media varsa parse et, yoksa boş dizi
+    let existingMedia = [];
+    if (product.media) {
+      try {
+        existingMedia = JSON.parse(product.media);
+      } catch {
+        existingMedia = [];
       }
     }
-    res.json(mediaItems);
-  });
+    
+    // Yeni medyaları ekle
+    const updatedMedia = [...existingMedia, ...mediaUrls];
+    
+    // Güncelle
+    db.prepare("UPDATE products SET media = ? WHERE id = ?").run(
+      JSON.stringify(updatedMedia),
+      productId
+    );
+    
+    res.json({ success: true, mediaUrls: updatedMedia });
+  } catch (err) {
+    console.error("Error saving media URLs:", err);
+    res.status(500).json({ error: "Failed to save media URLs" });
+  }
+});
 
   // API Routes
   app.get("/api/products", (req, res) => {

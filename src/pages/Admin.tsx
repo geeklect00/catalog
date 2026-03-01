@@ -3,6 +3,12 @@ import { useStore, Product } from '../context/StoreContext';
 import JSZip from 'jszip';
 import { Plus, Trash2, Edit2, Save, X, Settings as SettingsIcon, Package, Upload, MoveUp, MoveDown, ArrowLeft, Copy, Download, FileText, Sun, Moon } from 'lucide-react';
 
+// Cloudinary yapılandırması
+// NOT: Bu değerleri kendi Cloudinary bilgilerinizle değiştirin
+const CLOUDINARY_CLOUD_NAME = 'dfsdwqdnl'; // Cloudinary dashboard'dan alın
+const CLOUDINARY_UPLOAD_PRESET = 'fuego-upload'; // Cloudinary'de oluşturduğunuz preset
+const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`;
+
 export default function Admin() {
   const { products, settings, updateProduct, deleteProduct, updateSettings, uploadMedia, loading, exportData, importData, pages, updatePage, updateProductOrder } = useStore();
   const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem('admin_auth') === 'true');
@@ -13,6 +19,7 @@ export default function Admin() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [editingPage, setEditingPage] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
 
   const toggleDarkMode = () => {
@@ -69,21 +76,84 @@ export default function Admin() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    setIsUploading(true);
-    try {
-      const newMedia = await uploadMedia(e.target.files);
-      setEditingProduct({
-        ...editingProduct,
-        media: [...(editingProduct.media || []), ...newMedia]
-      });
-    } catch (err) {
-      alert('Yükleme başarısız!');
-    } finally {
-      setIsUploading(false);
+  // Cloudinary'e dosya yükleme fonksiyonu
+const uploadToCloudinary = async (file: File): Promise<{ url: string; type: 'image' | 'video' }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  
+  try {
+    const response = await fetch(CLOUDINARY_URL, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error('Upload failed');
     }
-  };
+    
+    const data = await response.json();
+    
+    return {
+      url: data.secure_url,
+      type: data.resource_type === 'video' ? 'video' : 'image'
+    };
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    throw error;
+  }
+};
+
+// Yeni handleFileUpload (Cloudinary ile)
+const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+  
+  setIsUploading(true);
+  setUploadError(null);
+  
+  try {
+    const uploadedUrls = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const result = await uploadToCloudinary(file);
+      uploadedUrls.push(result);
+    }
+    
+    // Önce ürünün media'sını güncelle (UI için)
+    const updatedMedia = [...(editingProduct.media || []), ...uploadedUrls];
+    setEditingProduct({
+      ...editingProduct,
+      media: updatedMedia
+    });
+    
+    // Cloudinary URL'lerini backend'e kaydet
+    const response = await fetch('/api/save-media-urls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        productId: editingProduct.id,
+        mediaUrls: uploadedUrls 
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to save media URLs');
+    }
+    
+    // Başarılı mesajı göster (opsiyonel)
+    console.log('Dosyalar başarıyla yüklendi');
+    
+  } catch (error) {
+    console.error('Upload error:', error);
+    alert('Dosya yüklenirken hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
+  } finally {
+    setIsUploading(false);
+    // File input'u temizle
+    e.target.value = '';
+  }
+};
 
   const moveMedia = (index: number, direction: 'up' | 'down') => {
     const newMedia = [...editingProduct.media];
@@ -782,7 +852,11 @@ export default function Admin() {
                     />
                     <Upload className={`w-10 h-10 mb-2 ${isUploading ? 'animate-bounce' : ''}`} />
                     <p className="text-sm text-gray-500">{isUploading ? 'Yükleniyor...' : 'Dosyaları buraya bırakın veya tıklayın'}</p>
-                  </div>
+					{/* BURAYA YENİ SATIRLARI EKLEYİN */}
+					{uploadError && (
+					  <p className="text-sm text-red-500 mt-2">Hata: {uploadError}</p>
+					)}
+				  </div>
 
                   <div className="space-y-2">
                     {editingProduct.media.map((item: any, idx: number) => (
