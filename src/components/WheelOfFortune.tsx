@@ -11,6 +11,16 @@ export default function WheelOfFortune() {
   const [rotation, setRotation] = useState(0);
   const wheelRef = useRef<HTMLDivElement>(null);
 
+  // Sabit ödül listesi - 50 TL'den 200 TL'ye kadar
+  const rewards = [
+    { label: "50 TL" },
+    { label: "100 TL" },
+    { label: "150 TL" },
+    { label: "200 TL" }
+  ];
+  
+  const segmentAngle = 360 / rewards.length;
+
   useEffect(() => {
     // Check if wheel should be shown
     const hasSpun = localStorage.getItem('fuego_wheel_spun');
@@ -22,26 +32,35 @@ export default function WheelOfFortune() {
 
   if (!isOpen || !settings.isWheelActive) return null;
 
-  const rewards = settings.wheelRewards || [];
-  const segmentAngle = 360 / rewards.length;
-
   const spinWheel = () => {
     if (isSpinning) return;
 
     setIsSpinning(true);
-    const extraSpins = 5 + Math.floor(Math.random() * 5);
-    const randomStop = Math.floor(Math.random() * 360);
-    const totalRotation = rotation + (extraSpins * 360) + randomStop;
+    
+    // Rastgele bir ödül seç (sadece 50-200 TL arası)
+    const availableRewards = [0, 1, 2, 3]; // 50,100,150,200 TL'nin indexleri
+    const selectedRewardIndex = availableRewards[Math.floor(Math.random() * availableRewards.length)];
+    
+    // Seçilen ödülün çarkta hangi açıda olduğunu hesapla
+    const targetSegmentAngle = selectedRewardIndex * segmentAngle;
+    
+    // Çarkın o ödüle gelmesi için gereken dönüş miktarını hesapla
+    const extraSpins = 5 + Math.floor(Math.random() * 5); // 5-10 tur arası
+    const currentRotation = rotation % 360;
+    
+    // Hedef açıya ulaşmak için gereken dönüşü hesapla
+    let targetRotation = (360 - currentRotation + targetSegmentAngle) % 360;
+    if (targetRotation < 10) targetRotation += 360; // Bir miktar fazla döndür
+    
+    const totalRotation = rotation + (extraSpins * 360) + targetRotation;
     
     setRotation(totalRotation);
 
     setTimeout(() => {
       setIsSpinning(false);
-      const actualStop = (360 - (totalRotation % 360)) % 360;
-      const rewardIndex = Math.floor(actualStop / segmentAngle);
-      const wonReward = rewards[rewardIndex];
       
-      setResult(wonReward.label);
+      // Kazanılan ödülü göster
+      setResult(rewards[selectedRewardIndex].label);
       localStorage.setItem('fuego_wheel_spun', 'true');
       
       confetti({
@@ -70,7 +89,9 @@ export default function WheelOfFortune() {
                 <Gift className="w-8 h-8 text-white dark:text-black" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Şans Çarkını Çevir!</h2>
-              <p className="text-gray-500 dark:text-gray-400 mt-2">Sürpriz indirimler ve hediyeler seni bekliyor.</p>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">
+                10.000 TL ve üzeri alışverişlerde geçerlidir.
+              </p>
             </div>
 
             <div className="relative w-64 h-64 mx-auto mb-8">
@@ -103,6 +124,10 @@ export default function WheelOfFortune() {
               </div>
             </div>
 
+            <div className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+              * Kazanılan indirimler 10.000 TL ve üzeri alışverişlerde geçerlidir.
+            </div>
+
             <button
               onClick={spinWheel}
               disabled={isSpinning}
@@ -120,9 +145,12 @@ export default function WheelOfFortune() {
             <div className="text-6xl mb-6">🎉</div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Tebrikler!</h2>
             <p className="text-gray-500 dark:text-gray-400 mb-6">Kazandığınız ödül:</p>
-            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 mb-8">
-              <span className="text-2xl font-bold text-black dark:text-white">{result}</span>
+            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 mb-4">
+              <span className="text-2xl font-bold text-black dark:text-white">{result} İndirim</span>
             </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              * 10.000 TL ve üzeri alışverişlerde geçerlidir.
+            </p>
             <p className="text-sm text-gray-400 dark:text-gray-500 mb-8">
               Ödülünüzü kullanmak için WhatsApp üzerinden bizimle iletişime geçebilirsiniz.
             </p>
