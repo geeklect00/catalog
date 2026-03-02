@@ -228,17 +228,75 @@ async function startServer() {
 
   // API Routes
   app.get("/api/products", async (req, res) => {
-    try {
-      const products = await Product.find().sort({ orderIndex: 1 });
-      res.json(products.map((p: any) => ({
-        ...p.toObject(),
-        isNew: !!p.isNew
-      })));
-    } catch (err) {
-      console.error('Error fetching products:', err);
-      res.status(500).json({ error: 'Failed to fetch products' });
-    }
-  });
+  try {
+    const products = await Product.find().sort({ orderIndex: 1 });
+    
+    // Her ürünü formatla
+    const formattedProducts = products.map((p: any) => {
+      const product = p.toObject();
+      
+      // MEDIA DÜZELTMESİ: Her zaman dizi olmasını sağla
+      if (product.media) {
+        // Eğer string ise parse et
+        if (typeof product.media === 'string') {
+          try {
+            product.media = JSON.parse(product.media);
+          } catch {
+            product.media = [];
+          }
+        }
+        // Eğer dizi değilse boş dizi yap
+        else if (!Array.isArray(product.media)) {
+          product.media = [];
+        }
+      } else {
+        product.media = [];
+      }
+      
+      // SİZES düzeltmesi
+      if (product.sizes && typeof product.sizes === 'string') {
+        try {
+          product.sizes = JSON.parse(product.sizes);
+        } catch {
+          product.sizes = [];
+        }
+      } else if (!Array.isArray(product.sizes)) {
+        product.sizes = [];
+      }
+      
+      // COLORS düzeltmesi
+      if (product.colors && typeof product.colors === 'string') {
+        try {
+          product.colors = JSON.parse(product.colors);
+        } catch {
+          product.colors = [];
+        }
+      } else if (!Array.isArray(product.colors)) {
+        product.colors = [];
+      }
+      
+      // CATEGORY düzeltmesi (eğer gerekirse)
+      if (product.category && typeof product.category === 'string') {
+        try {
+          // Eğer JSON string ise parse et
+          if (product.category.startsWith('[') || product.category.startsWith('{')) {
+            product.category = JSON.parse(product.category);
+          }
+        } catch {
+          // Olduğu gibi bırak
+        }
+      }
+      
+      product.isNew = !!product.isNew;
+      return product;
+    });
+    
+    res.json(formattedProducts);
+  } catch (err) {
+    console.error('Error fetching products:', err);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
 
   app.post("/api/products", async (req, res) => {
     const p = req.body;
