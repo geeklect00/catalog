@@ -4,11 +4,6 @@ import { X, Gift } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function WheelOfFortune() {
-  // ÇARK TAMAMEN DEVRE DIŞI
-  return null;
-  
-  // AŞAĞIDAKİ KODLAR ÇALIŞMAYACAK (dokunmayın)
-  /*
   const { settings } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -79,8 +74,10 @@ export default function WheelOfFortune() {
             </div>
 
             <div className="relative w-64 h-64 mx-auto mb-8">
+              {/* Pointer */}
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10 w-8 h-8 bg-red-500 clip-path-triangle rotate-180 shadow-lg"></div>
               
+              {/* Wheel */}
               <div 
                 ref={wheelRef}
                 className="w-full h-full rounded-full border-8 border-gray-100 dark:border-gray-800 relative overflow-hidden transition-transform duration-[4000ms] cubic-bezier(0.15, 0, 0.15, 1)"
@@ -140,5 +137,4 @@ export default function WheelOfFortune() {
       </div>
     </div>
   );
-  */
 }
